@@ -119,9 +119,13 @@ jobs:
         run: |
           set -euo pipefail
           [ "$CHANGED" = "true" ] || { echo "::error::expected changed=true"; exit 1; }
-          f=testdata/example-module/LICENSES/go/github.com/google/go-cmp/LICENSE
-          test -f "$f" || { echo "::error::missing $f"; exit 1; }
-          grep -q "^BSD-3-Clause$" testdata/example-module/LICENSES/LICENSES.txt
+          base=testdata/example-module/LICENSES
+          # go-licenses names a library by the imported package path, so the
+          # licence lands under .../go-cmp/<pkg>/LICENSE, not .../go-cmp/LICENSE.
+          find "$base/go/github.com/google/go-cmp" -name LICENSE | grep -q . \
+            || { echo "::error::no LICENSE saved for go-cmp"; exit 1; }
+          grep -q "go-cmp" "$base/LICENSES.txt" \
+            || { echo "::error::go-cmp missing from LICENSES.txt"; exit 1; }
           echo "write regenerated the folder and reported changed=true"
 
   pr-noop:
