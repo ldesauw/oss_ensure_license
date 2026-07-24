@@ -31,7 +31,7 @@ jobs:
           working-directory: testdata/example-module
 
       - name: Open PR if LICENSES changed
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore: update LICENSES folder"
           title: "chore: update LICENSES folder"
