@@ -7,7 +7,7 @@ Thanks for taking the time to contribute!
 This repository is the **OSS Ensure License** GitHub Action. The moving parts are:
 
 - [`action.yml`](action.yml) — the composite action interface (inputs/outputs).
-- [`hack/gen-licenses.sh`](hack/gen-licenses.sh) — the generator that produces
+- [`scripts/gen-licenses.sh`](scripts/gen-licenses.sh) — the generator that produces
   the `LICENSES/` folder. All real logic lives here.
 - [`testdata/example-module/`](testdata/example-module) — a small Go module that
   exists only to exercise the action in CI. It is not part of the action.
@@ -17,14 +17,14 @@ This repository is the **OSS Ensure License** GitHub Action. The moving parts ar
 You need Go and `bash`. From any Go module:
 
 ```bash
-GEN_LICENSES_WORKDIR="$PWD" /path/to/hack/gen-licenses.sh
+GEN_LICENSES_WORKDIR="$PWD" /path/to/scripts/gen-licenses.sh
 ```
 
 Or, against the bundled example module:
 
 ```bash
 cd testdata/example-module
-GEN_LICENSES_WORKDIR="$PWD" ../../hack/gen-licenses.sh
+GEN_LICENSES_WORKDIR="$PWD" ../../scripts/gen-licenses.sh
 git status LICENSES     # review the result
 ```
 
@@ -38,7 +38,7 @@ already on your `PATH`.
    module's `LICENSES/` folder (above) and commit the result — CI
    (`check-licenses`) fails otherwise.
 3. Keep the shell script POSIX-friendly `bash` and `set -euo pipefail`-clean;
-   run `bash -n hack/gen-licenses.sh` before pushing.
+   run `bash -n scripts/gen-licenses.sh` before pushing.
 4. Open a pull request describing the change and the motivation.
 
 ## Reporting bugs and requesting features

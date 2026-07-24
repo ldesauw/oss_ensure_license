@@ -7,7 +7,7 @@
 ## Checklist
 
 - [ ] I read [CONTRIBUTING.md](../CONTRIBUTING.md).
-- [ ] `bash -n hack/gen-licenses.sh` passes.
+- [ ] `bash -n scripts/gen-licenses.sh` passes.
 - [ ] If I changed the generator, I regenerated
       `testdata/example-module/LICENSES/` and committed the result.
 - [ ] Documentation (`README.md`, `action.yml` input descriptions) is updated

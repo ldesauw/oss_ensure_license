@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - "action.yml"
-      - "hack/gen-licenses.sh"
+      - "scripts/gen-licenses.sh"
       - "testdata/example-module/**"
       - ".github/workflows/check-licenses.yml"
 

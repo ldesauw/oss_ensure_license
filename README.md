@@ -22,8 +22,16 @@ source is **not** vendored — matching repos like
 and [`ovh/okms-cli`](https://github.com/ovh/okms-cli/tree/main/LICENSES/go).
 
 Under the hood it uses [`google/go-licenses`](https://github.com/google/go-licenses)
-(pinned) via [`hack/gen-licenses.sh`](hack/gen-licenses.sh), which you can also
+(pinned) via [`scripts/gen-licenses.sh`](scripts/gen-licenses.sh), which you can also
 run locally.
+
+## Supported environments
+
+| Environment | Supported versions |
+|---|---|
+| Go | 1.23 and later |
+
+> More ecosystems will be added later.
 
 ## Usage
 
@@ -129,7 +137,7 @@ one on later runs. If nothing changed, no PR is created.
 ## Local use
 
 ```bash
-./hack/gen-licenses.sh          # regenerate LICENSES/ in the current module
+./scripts/gen-licenses.sh          # regenerate LICENSES/ in the current module
 git status LICENSES             # review the diff
 ```
 

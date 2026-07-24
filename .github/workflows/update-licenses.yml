@@ -7,7 +7,7 @@ on:
     branches: [main]
     paths:
       - "action.yml"
-      - "hack/gen-licenses.sh"
+      - "scripts/gen-licenses.sh"
       - "testdata/example-module/go.mod"
       - "testdata/example-module/go.sum"
       - ".github/workflows/update-licenses.yml"

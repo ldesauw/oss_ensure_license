@@ -26,7 +26,7 @@
 #   GEN_LICENSES_VERSION      pinned go-licenses/v2 version      (default: v2.0.1)
 #   GEN_LICENSES_FAIL_ON      comma-separated SPDX ids to forbid (default: none)
 #
-# Usage: ./hack/gen-licenses.sh
+# Usage: ./scripts/gen-licenses.sh
 set -euo pipefail
 
 WORKDIR="${GEN_LICENSES_WORKDIR:-$PWD}"
