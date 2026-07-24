@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ovh/endure-licence@v1
+      - uses: ovh/oss_ensure_license@v1
         with:
           mode: check
 ```
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ovh/endure-licence@v1
+      - uses: ovh/oss_ensure_license@v1
         with:
           mode: write
       - uses: peter-evans/create-pull-request@v7
@@ -121,7 +121,7 @@ override the defaults; see the script header.
 For a Go module that is not at the repository root, set `working-directory`:
 
 ```yaml
-- uses: ovh/endure-licence@v1
+- uses: ovh/oss_ensure_license@v1
   with:
     mode: check
     working-directory: services/api
