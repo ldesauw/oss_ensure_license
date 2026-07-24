@@ -1,5 +1,8 @@
 # Endure Licence
 
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Endure%20Licence-blue?logo=github)](https://github.com/marketplace/actions/endure-licence)
+
 A GitHub Action that generates and verifies a `LICENSES/` folder for a Go
 module, following the [OVH](https://github.com/ovh) convention:
 
@@ -41,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ldesauw/oss_ensure_license@v1
+      - uses: ovh/endure-licence@v1
         with:
           mode: check
 ```
@@ -65,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ldesauw/oss_ensure_license@v1
+      - uses: ovh/endure-licence@v1
         with:
           mode: write
       - uses: peter-evans/create-pull-request@v7
@@ -112,3 +115,29 @@ git status LICENSES             # review the diff
 Environment variables (`GEN_LICENSES_WORKDIR`, `GEN_LICENSES_OUTPUT_DIR`,
 `GEN_LICENSES_PACKAGES`, `GEN_LICENSES_VERSION`, `GEN_LICENSES_FAIL_ON`)
 override the defaults; see the script header.
+
+## Module in a subdirectory
+
+For a Go module that is not at the repository root, set `working-directory`:
+
+```yaml
+- uses: ovh/endure-licence@v1
+  with:
+    mode: check
+    working-directory: services/api
+```
+
+The `LICENSES/` folder is written inside that directory. This repository uses
+the same mechanism to self-test the action against
+[`testdata/example-module`](testdata/example-module) — see
+[`.github/workflows`](.github/workflows).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Participation is governed by our
+[Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities per
+[SECURITY.md](SECURITY.md).
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE). Copyright © OVH SAS.

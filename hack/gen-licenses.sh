@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #
+# Copyright (c) OVH SAS. Licensed under the Apache License, Version 2.0.
+#
 # Regenerate the LICENSES/ folder for a Go module.
 #
 #   <output>/go/<module-path>/LICENSE   the licence text of each dependency

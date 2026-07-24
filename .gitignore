@@ -1,2 +1,10 @@
-/endure-licence
+# Built binaries
 /build/
+endure-licence
+endure-licence-example
+
+# Editor / OS noise
+.idea/
+.vscode/
+*.swp
+.DS_Store

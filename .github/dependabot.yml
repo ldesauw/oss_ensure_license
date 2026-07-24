@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # GitHub Actions used by this repository's workflows and composite action.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+
+  # Dependencies of the example module used to self-test the action.
+  - package-ecosystem: "gomod"
+    directory: "/testdata/example-module"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"

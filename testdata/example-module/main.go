@@ -1,6 +1,10 @@
-// Command endure-licence is a dummy program used to exercise hack/gen-licenses.sh.
-// It pulls in a few dependencies with different licence types so the generated
-// LICENSES/ folder has something meaningful to show.
+// Copyright (c) OVH SAS. Licensed under the Apache License, Version 2.0.
+//
+// Command endure-licence-example is a fixture module used to exercise the
+// Endure Licence action and hack/gen-licenses.sh. It imports a few
+// dependencies with different licence types (MIT, BSD-2, BSD-3, MPL-2.0) so
+// the generated LICENSES/ folder has something meaningful to show. It is not
+// part of the action itself.
 package main
 
 import (
