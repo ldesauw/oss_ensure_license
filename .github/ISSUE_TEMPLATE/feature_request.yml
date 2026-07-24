@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an improvement to the Endure Licence action
+description: Suggest an improvement to the OSS Ensure License action
 labels: ["enhancement"]
 body:
   - type: textarea

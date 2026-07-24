@@ -1,4 +1,4 @@
-module github.com/ovh/endure-licence-example
+module github.com/ovh/oss-ensure-license-example
 
 go 1.23
 

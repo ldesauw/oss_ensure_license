@@ -1,7 +1,7 @@
-# Endure Licence
+# OSS Ensure License
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Endure%20Licence-blue?logo=github)](https://github.com/marketplace/actions/endure-licence)
+[![Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-OSS%20Ensure%20License-blue?logo=github)](https://github.com/marketplace/actions/oss-ensure-license)
 
 A GitHub Action that generates and verifies a `LICENSES/` folder for a Go
 module, following the [OVH](https://github.com/ovh) convention:

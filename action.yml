@@ -1,4 +1,4 @@
-name: "Endure Licence"
+name: "OSS Ensure License"
 description: >-
   Generate and verify a LICENSES/ folder for a Go module (OVH-style): one
   LICENSE file per dependency plus a LICENSES.txt summary.
@@ -74,7 +74,7 @@ inputs:
   pr-body:
     description: "Pull request body."
     required: false
-    default: "Automated update of the LICENSES folder by the Endure Licence action."
+    default: "Automated update of the LICENSES folder by the OSS Ensure License action."
   pr-labels:
     description: "Comma-separated labels to apply to the pull request (must already exist)."
     required: false

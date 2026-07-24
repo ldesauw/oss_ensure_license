@@ -8,7 +8,7 @@ MPL-2.0
 Packages:
 github.com/google/uuid; BSD-3-Clause
 github.com/hashicorp/go-version; MPL-2.0
-github.com/ovh/endure-licence-example; Apache-2.0
+github.com/ovh/oss-ensure-license-example; Apache-2.0
 github.com/pkg/errors; BSD-2-Clause
 github.com/sirupsen/logrus; MIT
 golang.org/x/sys/unix; BSD-3-Clause

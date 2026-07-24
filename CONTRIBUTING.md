@@ -4,7 +4,7 @@ Thanks for taking the time to contribute!
 
 ## What this repository is
 
-This repository is the **Endure Licence** GitHub Action. The moving parts are:
+This repository is the **OSS Ensure License** GitHub Action. The moving parts are:
 
 - [`action.yml`](action.yml) — the composite action interface (inputs/outputs).
 - [`hack/gen-licenses.sh`](hack/gen-licenses.sh) — the generator that produces

@@ -1,10 +1,13 @@
-# Built binaries
+# Built binaries (anchored, so it does not also match the module's licence
+# directory of the same name under testdata/example-module/LICENSES/go/...)
 /build/
-endure-licence
-endure-licence-example
+/testdata/example-module/oss-ensure-license-example
 
 # Editor / OS noise
 .idea/
 .vscode/
 *.swp
 .DS_Store
+
+# Claude Code local state
+.claude/

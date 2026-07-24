@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a problem with the Endure Licence action
+description: Report a problem with the OSS Ensure License action
 labels: ["bug"]
 body:
   - type: textarea
