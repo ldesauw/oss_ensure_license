@@ -1,15 +1,14 @@
 name: check-licenses
 
-# Fails a PR when the committed LICENSES/ folder no longer matches the current
-# dependency set. Complements update-licenses.yml (which opens a fix-up PR on
-# main): here contributors get fast feedback and run ./hack/gen-licenses.sh
-# themselves before merging.
+# Self-test / live example: run this repository's own action against its
+# (dummy) Go module and fail if the committed LICENSES/ folder is stale.
 on:
   pull_request:
     paths:
       - "go.mod"
       - "go.sum"
       - "hack/gen-licenses.sh"
+      - "action.yml"
       - "LICENSES/**"
       - ".github/workflows/check-licenses.yml"
 
@@ -21,24 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: ./
         with:
-          go-version-file: go.mod
-
-      - name: Install go-licenses
-        run: go install github.com/google/go-licenses/v2@v2.0.1
-
-      - name: Regenerate LICENSES folder
-        run: ./hack/gen-licenses.sh
-
-      - name: Assert LICENSES is up to date
-        run: |
-          if [ -n "$(git status --porcelain -- LICENSES)" ]; then
-            echo "::error::LICENSES/ is out of date. Run ./hack/gen-licenses.sh and commit the result."
-            git --no-pager diff -- LICENSES
-            git status --porcelain -- LICENSES
-            exit 1
-          fi
-          echo "LICENSES/ is up to date."
+          mode: check

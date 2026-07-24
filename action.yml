@@ -1,0 +1,112 @@
+name: "Go LICENSES folder"
+description: >-
+  Generate and verify a LICENSES/ folder for a Go module (OVH-style): one
+  LICENSE file per dependency plus a LICENSES.txt summary.
+author: "ldesauw"
+
+branding:
+  icon: "book-open"
+  color: "blue"
+
+inputs:
+  mode:
+    description: >-
+      "check" fails the job when the committed LICENSES folder is out of date.
+      "write" regenerates it in place (commit/PR is left to your workflow).
+    required: false
+    default: "check"
+  packages:
+    description: "Go packages to scan."
+    required: false
+    default: "./..."
+  output-dir:
+    description: "Folder to write, relative to working-directory."
+    required: false
+    default: "LICENSES"
+  working-directory:
+    description: "Directory of the Go module to scan."
+    required: false
+    default: "."
+  go-version:
+    description: >-
+      Go version for actions/setup-go (e.g. "1.26"). If empty, go-version-file
+      is used instead.
+    required: false
+    default: ""
+  go-version-file:
+    description: "File to read the Go version from, relative to working-directory."
+    required: false
+    default: "go.mod"
+  go-licenses-version:
+    description: "Pinned github.com/google/go-licenses/v2 version."
+    required: false
+    default: "v2.0.1"
+  fail-on-licenses:
+    description: >-
+      Comma-separated SPDX ids that must NOT appear (e.g. "GPL-3.0,AGPL-3.0").
+      Empty disables the check.
+    required: false
+    default: ""
+
+outputs:
+  changed:
+    description: '"true" if regenerating changed the LICENSES folder, else "false".'
+    value: ${{ steps.generate.outputs.changed }}
+  summary:
+    description: "Path to the generated LICENSES.txt (relative to working-directory)."
+    value: ${{ steps.generate.outputs.summary }}
+  licenses:
+    description: "Comma-separated unique licences found."
+    value: ${{ steps.generate.outputs.licenses }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        go-version-file: ${{ inputs.working-directory }}/${{ inputs.go-version-file }}
+        cache-dependency-path: ${{ inputs.working-directory }}/go.sum
+
+    - name: Generate & check LICENSES
+      id: generate
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        MODE: ${{ inputs.mode }}
+        GEN_LICENSES_PACKAGES: ${{ inputs.packages }}
+        GEN_LICENSES_OUTPUT_DIR: ${{ inputs.output-dir }}
+        GEN_LICENSES_VERSION: ${{ inputs.go-licenses-version }}
+        GEN_LICENSES_FAIL_ON: ${{ inputs.fail-on-licenses }}
+      run: |
+        set -euo pipefail
+
+        # Regenerate the folder (also runs the optional forbidden-licence gate).
+        "${GITHUB_ACTION_PATH}/hack/gen-licenses.sh"
+
+        out="${GEN_LICENSES_OUTPUT_DIR}"
+
+        # Outputs.
+        if [ -n "$(git status --porcelain -- "${out}")" ]; then
+          changed="true"
+        else
+          changed="false"
+        fi
+        licenses="$(sed -n '/^Licences:/,/^$/p' "${out}/LICENSES.txt" \
+          | sed '1d;/^[[:space:]]*$/d' | paste -sd, -)"
+        {
+          echo "changed=${changed}"
+          echo "summary=${out}/LICENSES.txt"
+          echo "licenses=${licenses}"
+        } >> "${GITHUB_OUTPUT}"
+
+        echo "changed=${changed}; licenses=${licenses}"
+
+        # In check mode, drift is a failure.
+        if [ "${MODE}" = "check" ] && [ "${changed}" = "true" ]; then
+          echo "::error::${out}/ is out of date. Re-run this action with mode: write and commit the result."
+          git --no-pager diff -- "${out}" || true
+          git status --porcelain -- "${out}"
+          exit 1
+        fi

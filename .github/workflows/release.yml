@@ -1,0 +1,29 @@
+name: release
+
+# When a semver tag (vX.Y.Z) is pushed, move the major-version tag (vX) to it
+# so consumers can pin `uses: <owner>/<repo>@v1` and receive patch updates.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  retag-major:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Move major-version tag
+        run: |
+          set -euo pipefail
+          major="${GITHUB_REF_NAME%%.*}" # v1.2.3 -> v1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "${major}" "${GITHUB_REF_NAME}"
+          git push -f origin "refs/tags/${major}"
+          echo "Moved ${major} -> ${GITHUB_REF_NAME}"

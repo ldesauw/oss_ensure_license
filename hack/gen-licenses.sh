@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Regenerate the LICENSES/ folder for the current Go module.
+# Regenerate the LICENSES/ folder for a Go module.
 #
-#   LICENSES/go/<module-path>/LICENSE   the licence text of each dependency
-#   LICENSES/LICENSES.txt               summary (unique licences + per-package list)
+#   <output>/go/<module-path>/LICENSE   the licence text of each dependency
+#   <output>/LICENSES.txt               summary (unique licences + per-package list)
 #
 # Layout mirrors the OVH convention, e.g.
 #   https://github.com/ovh/okms-k8s-encryption-provider/tree/main/LICENSES
@@ -15,18 +15,27 @@
 # dependency's LicensePath ourselves instead of using `go-licenses save`, which
 # would vendor the full source tree of reciprocal-licensed dependencies.
 #
-# Run locally with `./hack/gen-licenses.sh` or in CI (see the workflows).
+# Configuration comes from the environment (the action sets these; a bare local
+# run uses the defaults, operating on the current directory):
+#
+#   GEN_LICENSES_WORKDIR      Go module directory to scan       (default: $PWD)
+#   GEN_LICENSES_OUTPUT_DIR   output folder, relative to workdir (default: LICENSES)
+#   GEN_LICENSES_PACKAGES     packages to scan                   (default: ./...)
+#   GEN_LICENSES_VERSION      pinned go-licenses/v2 version      (default: v2.0.1)
+#   GEN_LICENSES_FAIL_ON      comma-separated SPDX ids to forbid (default: none)
+#
+# Usage: ./hack/gen-licenses.sh
 set -euo pipefail
 
-# Pinned go-licenses version (module path is /v2 since v2.0.0).
-GO_LICENSES_VERSION="v2.0.1"
+WORKDIR="${GEN_LICENSES_WORKDIR:-$PWD}"
+OUTPUT_DIR_NAME="${GEN_LICENSES_OUTPUT_DIR:-LICENSES}"
+PKGS="${GEN_LICENSES_PACKAGES:-./...}"
+GO_LICENSES_VERSION="${GEN_LICENSES_VERSION:-v2.0.1}"
+FAIL_ON="${GEN_LICENSES_FAIL_ON:-}"
 
-# Packages to scan (default: every package of the current module).
-PKGS="${1:-./...}"
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "${ROOT_DIR}"
-OUT_DIR="${ROOT_DIR}/LICENSES"
+cd "${WORKDIR}"
+WORKDIR="${PWD}"
+OUT_DIR="${WORKDIR}/${OUTPUT_DIR_NAME}"
 GO_DIR="${OUT_DIR}/go"
 SUMMARY="${OUT_DIR}/LICENSES.txt"
 
@@ -73,13 +82,13 @@ if [ -n "${MODULE}" ]; then
   if [ -z "${main_lic}" ] || [ "${main_lic}" = "Unknown" ]; then
     # Prefer an SPDX identifier declared in the root LICENSE, if present.
     spdx=""
-    if [ -f "${ROOT_DIR}/LICENSE" ]; then
-      spdx="$(grep -m1 -oiE 'SPDX-License-Identifier:[[:space:]]*[^[:space:]]+' "${ROOT_DIR}/LICENSE" \
+    if [ -f "${WORKDIR}/LICENSE" ]; then
+      spdx="$(grep -m1 -oiE 'SPDX-License-Identifier:[[:space:]]*[^[:space:]]+' "${WORKDIR}/LICENSE" \
         | sed -E 's/.*:[[:space:]]*//' || true)"
     fi
     if [ -n "${spdx}" ]; then
       main_lic="${spdx}"
-    elif [ -f "${ROOT_DIR}/LICENSE" ]; then
+    elif [ -f "${WORKDIR}/LICENSE" ]; then
       # Licence text present but not machine-identifiable: point at the file.
       main_lic="Unknown. See go/${MODULE}/LICENSE file"
     else
@@ -94,6 +103,7 @@ fi
 # 5. Emit the two-section summary. In the unique "Licences:" list, collapse any
 #    "Unknown. See ... file" pointer back to the short token "Unknown".
 echo ">> writing summary to ${SUMMARY}"
+mkdir -p "${OUT_DIR}"
 {
   echo "Licences:"
   printf '%s\n' "${PKG_LIST}" | sed -E 's/.*; //; s/^Unknown\..*/Unknown/' | sort -u
@@ -101,5 +111,26 @@ echo ">> writing summary to ${SUMMARY}"
   echo "Packages:"
   printf '%s\n' "${PKG_LIST}"
 } > "${SUMMARY}"
+
+# 6. Optional policy gate: fail if any forbidden SPDX licence is present.
+if [ -n "${FAIL_ON}" ]; then
+  echo ">> checking forbidden licences: ${FAIL_ON}"
+  violations=""
+  IFS=',' read -ra forbidden <<< "${FAIL_ON}"
+  while IFS= read -r line; do
+    [ -z "${line}" ] && continue
+    lic="${line#*; }"
+    for f in "${forbidden[@]}"; do
+      f_trim="$(printf '%s' "${f}" | tr -d '[:space:]')"
+      [ -z "${f_trim}" ] && continue
+      [ "${lic}" = "${f_trim}" ] && violations="${violations}${line}"$'\n'
+    done
+  done <<< "${PKG_LIST}"
+  if [ -n "${violations}" ]; then
+    echo "ERROR: forbidden licence(s) found:" >&2
+    printf '%s' "${violations}" >&2
+    exit 3
+  fi
+fi
 
 echo ">> done"
