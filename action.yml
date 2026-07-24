@@ -1,4 +1,4 @@
-name: "Go LICENSES folder"
+name: "Endure Licence"
 description: >-
   Generate and verify a LICENSES/ folder for a Go module (OVH-style): one
   LICENSE file per dependency plus a LICENSES.txt summary.

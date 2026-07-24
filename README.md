@@ -1,4 +1,4 @@
-# Go LICENSES folder action
+# Endure Licence
 
 A GitHub Action that generates and verifies a `LICENSES/` folder for a Go
 module, following the [OVH](https://github.com/ovh) convention:
