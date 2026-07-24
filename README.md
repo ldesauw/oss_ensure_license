@@ -112,8 +112,10 @@ one on later runs. If nothing changed, no PR is created.
 | `commit-message` | `chore: update LICENSES folder` | Commit message. |
 | `git-user-name` / `git-user-email` | `github-actions[bot]` | Commit author identity. |
 
-> `mode: pr` uses the [`gh`](https://cli.github.com) CLI, which is preinstalled
-> on GitHub-hosted runners.
+> `mode: pr` creates the branch, commit, and PR entirely through the GitHub
+> REST API (`curl` + `jq`, both preinstalled on GitHub-hosted runners). The
+> commit is therefore signed by GitHub and shows as **Verified**, and no git
+> push credentials are needed.
 
 ## Outputs
 

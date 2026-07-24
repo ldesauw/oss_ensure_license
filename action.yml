@@ -166,51 +166,15 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.token || github.token }}
         GH_REPO: ${{ github.repository }}
+        API_URL: ${{ github.api_url }}
         OUT: ${{ inputs.output-dir }}
         PR_BRANCH: ${{ inputs.pr-branch }}
         PR_BASE: ${{ inputs.pr-base }}
+        DEFAULT_BASE: ${{ github.ref_name }}
         PR_TITLE: ${{ inputs.pr-title }}
         PR_BODY: ${{ inputs.pr-body }}
         PR_LABELS: ${{ inputs.pr-labels }}
         COMMIT_MESSAGE: ${{ inputs.commit-message }}
         GIT_USER_NAME: ${{ inputs.git-user-name }}
         GIT_USER_EMAIL: ${{ inputs.git-user-email }}
-        SERVER_URL: ${{ github.server_url }}
-        DEFAULT_BASE: ${{ github.ref_name }}
-      run: |
-        set -euo pipefail
-        base="${PR_BASE:-$DEFAULT_BASE}"
-
-        git config user.name "${GIT_USER_NAME}"
-        git config user.email "${GIT_USER_EMAIL}"
-
-        # Commit the regenerated folder on a dedicated branch.
-        git checkout -B "${PR_BRANCH}"
-        git add -A -- "${OUT}"
-        git commit -m "${COMMIT_MESSAGE}"
-
-        # Push with the token explicitly so a custom PAT/App token also works.
-        host="${SERVER_URL#https://}"
-        git push --force \
-          "https://x-access-token:${GH_TOKEN}@${host}/${GH_REPO}.git" \
-          "HEAD:refs/heads/${PR_BRANCH}"
-
-        # Open a PR unless one is already open for this branch (the push above
-        # updates an existing one).
-        number="$(gh pr list --head "${PR_BRANCH}" --base "${base}" --state open \
-          --json number --jq '.[0].number' 2>/dev/null || true)"
-        if [ -z "${number}" ]; then
-          url="$(gh pr create --base "${base}" --head "${PR_BRANCH}" \
-            --title "${PR_TITLE}" --body "${PR_BODY}")"
-          echo "Opened pull request: ${url}"
-        else
-          url="$(gh pr view "${number}" --json url --jq '.url')"
-          echo "Updated existing pull request #${number}: ${url}"
-        fi
-
-        if [ -n "${PR_LABELS}" ]; then
-          gh pr edit "${PR_BRANCH}" --add-label "${PR_LABELS}" \
-            || echo "::warning::could not add labels: ${PR_LABELS}"
-        fi
-
-        echo "pull-request-url=${url}" >> "${GITHUB_OUTPUT}"
+      run: "${GITHUB_ACTION_PATH}/hack/open-pr.sh"
