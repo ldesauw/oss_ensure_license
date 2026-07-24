@@ -51,7 +51,8 @@ jobs:
 
 ### Auto-update via pull request
 
-Regenerate on `main` and open a PR when anything changed:
+Regenerate on `main` and let the action open (or update) a PR when anything
+changed — no extra action required:
 
 ```yaml
 name: update-licenses
@@ -70,25 +71,26 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ovh/oss_ensure_license@v1
         with:
-          mode: write
-      - uses: peter-evans/create-pull-request@v7
-        with:
-          commit-message: "chore: update LICENSES folder"
-          title: "chore: update LICENSES folder"
-          branch: chore/update-licenses
-          add-paths: LICENSES
+          mode: pr
+          pr-labels: "dependencies,licenses"
 ```
 
+The action commits the regenerated folder to `pr-branch` (default
+`chore/update-licenses`), pushes it, and opens a PR — or updates the existing
+one on later runs. If nothing changed, no PR is created.
+
 > [!NOTE]
-> `peter-evans/create-pull-request` needs **Settings → Actions → General →
-> "Allow GitHub Actions to create and approve pull requests"** enabled, or a
-> PAT / GitHub App token passed via its `token:` input.
+> Opening a PR with the default `GITHUB_TOKEN` requires **Settings → Actions →
+> General → "Allow GitHub Actions to create and approve pull requests"**
+> enabled. Otherwise pass a PAT or GitHub App token via the `token:` input.
+> This is a GitHub restriction on `GITHUB_TOKEN`, independent of how the PR is
+> created.
 
 ## Inputs
 
 | Input | Default | Description |
 |---|---|---|
-| `mode` | `check` | `check` fails on drift; `write` regenerates in place. |
+| `mode` | `check` | `check` fails on drift; `write` regenerates in place; `pr` regenerates and opens/updates a PR. |
 | `packages` | `./...` | Go packages to scan. |
 | `output-dir` | `LICENSES` | Output folder, relative to `working-directory`. |
 | `working-directory` | `.` | Go module directory (monorepo / subdir). |
@@ -97,6 +99,22 @@ jobs:
 | `go-licenses-version` | `v2.0.1` | Pinned `go-licenses/v2` version. |
 | `fail-on-licenses` | *(empty)* | Comma-separated SPDX ids to forbid, e.g. `GPL-3.0,AGPL-3.0`. |
 
+### Pull-request options (`mode: pr`)
+
+| Input | Default | Description |
+|---|---|---|
+| `token` | `GITHUB_TOKEN` | Token to push the branch and open the PR. |
+| `pr-branch` | `chore/update-licenses` | Head branch for the PR. |
+| `pr-base` | *(current ref)* | Base branch of the PR. |
+| `pr-title` | `chore: update LICENSES folder` | PR title. |
+| `pr-body` | *(see action.yml)* | PR body. |
+| `pr-labels` | *(empty)* | Comma-separated labels to apply (must already exist). |
+| `commit-message` | `chore: update LICENSES folder` | Commit message. |
+| `git-user-name` / `git-user-email` | `github-actions[bot]` | Commit author identity. |
+
+> `mode: pr` uses the [`gh`](https://cli.github.com) CLI, which is preinstalled
+> on GitHub-hosted runners.
+
 ## Outputs
 
 | Output | Description |
@@ -104,6 +122,7 @@ jobs:
 | `changed` | `"true"` if regeneration changed the folder. |
 | `summary` | Path to the generated `LICENSES.txt`. |
 | `licenses` | Comma-separated unique licences found. |
+| `pull-request-url` | URL of the PR opened/updated in `mode: pr` (empty otherwise). |
 
 ## Local use
 

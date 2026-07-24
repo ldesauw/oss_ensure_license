@@ -12,7 +12,9 @@ inputs:
   mode:
     description: >-
       "check" fails the job when the committed LICENSES folder is out of date.
-      "write" regenerates it in place (commit/PR is left to your workflow).
+      "write" regenerates it in place (git is left to your workflow).
+      "pr" regenerates it and, if anything changed, opens or updates a pull
+      request.
     required: false
     default: "check"
   packages:
@@ -48,6 +50,48 @@ inputs:
     required: false
     default: ""
 
+  # --- Pull-request options (mode: pr) --------------------------------------
+  token:
+    description: >-
+      Token used to push the branch and open the pull request. Defaults to the
+      workflow's GITHUB_TOKEN. Note that GITHUB_TOKEN can only open PRs when
+      "Allow GitHub Actions to create and approve pull requests" is enabled;
+      otherwise supply a PAT or GitHub App token here.
+    required: false
+    default: ""
+  pr-branch:
+    description: "Head branch used for the pull request."
+    required: false
+    default: "chore/update-licenses"
+  pr-base:
+    description: "Base branch of the pull request. Defaults to the current ref."
+    required: false
+    default: ""
+  pr-title:
+    description: "Pull request title."
+    required: false
+    default: "chore: update LICENSES folder"
+  pr-body:
+    description: "Pull request body."
+    required: false
+    default: "Automated update of the LICENSES folder by the Endure Licence action."
+  pr-labels:
+    description: "Comma-separated labels to apply to the pull request (must already exist)."
+    required: false
+    default: ""
+  commit-message:
+    description: "Commit message for the regenerated folder."
+    required: false
+    default: "chore: update LICENSES folder"
+  git-user-name:
+    description: "Author/committer name for the commit."
+    required: false
+    default: "github-actions[bot]"
+  git-user-email:
+    description: "Author/committer email for the commit."
+    required: false
+    default: "41898282+github-actions[bot]@users.noreply.github.com"
+
 outputs:
   changed:
     description: '"true" if regenerating changed the LICENSES folder, else "false".'
@@ -58,6 +102,9 @@ outputs:
   licenses:
     description: "Comma-separated unique licences found."
     value: ${{ steps.generate.outputs.licenses }}
+  pull-request-url:
+    description: "URL of the pull request opened or updated in mode: pr (empty otherwise)."
+    value: ${{ steps.pr.outputs.pull-request-url }}
 
 runs:
   using: "composite"
@@ -105,8 +152,65 @@ runs:
 
         # In check mode, drift is a failure.
         if [ "${MODE}" = "check" ] && [ "${changed}" = "true" ]; then
-          echo "::error::${out}/ is out of date. Re-run this action with mode: write and commit the result."
+          echo "::error::${out}/ is out of date. Re-run this action with mode: write or pr and commit the result."
           git --no-pager diff -- "${out}" || true
           git status --porcelain -- "${out}"
           exit 1
         fi
+
+    - name: Open pull request
+      id: pr
+      if: ${{ inputs.mode == 'pr' && steps.generate.outputs.changed == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GH_TOKEN: ${{ inputs.token || github.token }}
+        GH_REPO: ${{ github.repository }}
+        OUT: ${{ inputs.output-dir }}
+        PR_BRANCH: ${{ inputs.pr-branch }}
+        PR_BASE: ${{ inputs.pr-base }}
+        PR_TITLE: ${{ inputs.pr-title }}
+        PR_BODY: ${{ inputs.pr-body }}
+        PR_LABELS: ${{ inputs.pr-labels }}
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        GIT_USER_NAME: ${{ inputs.git-user-name }}
+        GIT_USER_EMAIL: ${{ inputs.git-user-email }}
+        SERVER_URL: ${{ github.server_url }}
+        DEFAULT_BASE: ${{ github.ref_name }}
+      run: |
+        set -euo pipefail
+        base="${PR_BASE:-$DEFAULT_BASE}"
+
+        git config user.name "${GIT_USER_NAME}"
+        git config user.email "${GIT_USER_EMAIL}"
+
+        # Commit the regenerated folder on a dedicated branch.
+        git checkout -B "${PR_BRANCH}"
+        git add -A -- "${OUT}"
+        git commit -m "${COMMIT_MESSAGE}"
+
+        # Push with the token explicitly so a custom PAT/App token also works.
+        host="${SERVER_URL#https://}"
+        git push --force \
+          "https://x-access-token:${GH_TOKEN}@${host}/${GH_REPO}.git" \
+          "HEAD:refs/heads/${PR_BRANCH}"
+
+        # Open a PR unless one is already open for this branch (the push above
+        # updates an existing one).
+        number="$(gh pr list --head "${PR_BRANCH}" --base "${base}" --state open \
+          --json number --jq '.[0].number' 2>/dev/null || true)"
+        if [ -z "${number}" ]; then
+          url="$(gh pr create --base "${base}" --head "${PR_BRANCH}" \
+            --title "${PR_TITLE}" --body "${PR_BODY}")"
+          echo "Opened pull request: ${url}"
+        else
+          url="$(gh pr view "${number}" --json url --jq '.url')"
+          echo "Updated existing pull request #${number}: ${url}"
+        fi
+
+        if [ -n "${PR_LABELS}" ]; then
+          gh pr edit "${PR_BRANCH}" --add-label "${PR_LABELS}" \
+            || echo "::warning::could not add labels: ${PR_LABELS}"
+        fi
+
+        echo "pull-request-url=${url}" >> "${GITHUB_OUTPUT}"
