@@ -6,9 +6,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/google/uuid"     // BSD-3-Clause
-	"github.com/pkg/errors"      // BSD-2-Clause
-	"github.com/sirupsen/logrus" // MIT
+	"github.com/google/uuid"                  // BSD-3-Clause
+	version "github.com/hashicorp/go-version" // MPL-2.0
+	"github.com/pkg/errors"                   // BSD-2-Clause
+	"github.com/sirupsen/logrus"              // MIT
 )
 
 func main() {
@@ -19,5 +20,10 @@ func main() {
 		logrus.WithError(errors.Wrap(err, "generating id")).Fatal("failed")
 	}
 
-	fmt.Println("hello, id:", id.String())
+	v, err := version.NewVersion("1.2.3")
+	if err != nil {
+		logrus.WithError(errors.Wrap(err, "parsing version")).Fatal("failed")
+	}
+
+	fmt.Printf("hello, id: %s, version: %s\n", id.String(), v.String())
 }

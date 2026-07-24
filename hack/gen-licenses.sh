@@ -2,11 +2,20 @@
 #
 # Regenerate the LICENSES/ folder for the current Go module.
 #
-#   LICENSES/go/<module-path>/LICENSE   one LICENSE file per dependency
+#   LICENSES/go/<module-path>/LICENSE   the licence text of each dependency
 #   LICENSES/LICENSES.txt               summary (unique licences + per-package list)
 #
-# Layout mirrors https://github.com/ovh/okms-k8s-encryption-provider/tree/main/LICENSES
-# Run locally with `./hack/gen-licenses.sh` or in CI (see .github/workflows/update-licenses.yml).
+# Layout mirrors the OVH convention, e.g.
+#   https://github.com/ovh/okms-k8s-encryption-provider/tree/main/LICENSES
+#   https://github.com/ovh/terraform-provider-ovh/tree/master/LICENSES
+#
+# Only the licence file is stored per dependency, whatever its licence type.
+# Reciprocal licences (MPL-2.0, ...) are treated like permissive ones: their
+# source is NOT vendored (matching the OVH repos). This is why we copy each
+# dependency's LicensePath ourselves instead of using `go-licenses save`, which
+# would vendor the full source tree of reciprocal-licensed dependencies.
+#
+# Run locally with `./hack/gen-licenses.sh` or in CI (see the workflows).
 set -euo pipefail
 
 # Pinned go-licenses version (module path is /v2 since v2.0.0).
@@ -28,25 +37,35 @@ if ! command -v go-licenses >/dev/null 2>&1; then
   export PATH="$(go env GOPATH)/bin:${PATH}"
 fi
 
-# 1. Save every dependency's LICENSE file, laid out by import path.
-#    This includes the main module's own LICENSE at go/<module>/LICENSE.
-echo ">> saving dependency LICENSE files to ${GO_DIR}"
-rm -rf "${GO_DIR}"
-mkdir -p "${GO_DIR}"
-go-licenses save "${PKGS}" --save_path="${GO_DIR}" --force
-
-# 2. Collect "<package>; <Licence>" lines for every dependency.
-echo ">> writing summary to ${SUMMARY}"
+# 1. Ask go-licenses for one "<name>\t<licence>\t<licence-file-path>" row per
+#    dependency (including the main module, classified from its own LICENSE).
+echo ">> collecting licences with go-licenses report"
 TPL="$(mktemp)"
 trap 'rm -f "${TPL}"' EXIT
 cat > "${TPL}" <<'EOF'
-{{range .}}{{.Name}}; {{if .LicenseName}}{{.LicenseName}}{{else}}Unknown{{end}}
+{{range .}}{{.Name}}	{{if .LicenseName}}{{.LicenseName}}{{else}}Unknown{{end}}	{{.LicensePath}}
 {{end}}
 EOF
 
-PKG_LIST="$(go-licenses report "${PKGS}" --template "${TPL}" 2>/dev/null | sed '/^[[:space:]]*$/d' | sort)"
+RAW="$(go-licenses report "${PKGS}" --template "${TPL}" 2>/dev/null | sed '/^[[:space:]]*$/d')"
 
-# 3. For the main module, use the licence declared in the repository itself
+# 2. Copy each dependency's licence file into the tree as go/<name>/LICENSE.
+echo ">> writing licence files to ${GO_DIR}"
+rm -rf "${GO_DIR}"
+mkdir -p "${GO_DIR}"
+while IFS=$'\t' read -r name licence path; do
+  [ -z "${name}" ] && continue
+  if [ -n "${path}" ] && [ "${path}" != "Unknown" ] && [ -f "${path}" ]; then
+    dest="${GO_DIR}/${name}"
+    mkdir -p "${dest}"
+    cp "${path}" "${dest}/LICENSE"
+  fi
+done <<< "${RAW}"
+
+# 3. Build the "<package>; <Licence>" lines, sorted.
+PKG_LIST="$(printf '%s\n' "${RAW}" | awk -F'\t' 'NF>=2 {print $1 "; " $2}' | sort)"
+
+# 4. For the main module, use the licence declared in the repository itself
 #    (its root LICENSE file) instead of leaving it as "Unknown".
 MODULE="$(go list -m 2>/dev/null | head -n1 || true)"
 if [ -n "${MODULE}" ]; then
@@ -72,8 +91,9 @@ if [ -n "${MODULE}" ]; then
   fi
 fi
 
-# 4. Emit the two-section summary. In the unique "Licences:" list, collapse any
+# 5. Emit the two-section summary. In the unique "Licences:" list, collapse any
 #    "Unknown. See ... file" pointer back to the short token "Unknown".
+echo ">> writing summary to ${SUMMARY}"
 {
   echo "Licences:"
   printf '%s\n' "${PKG_LIST}" | sed -E 's/.*; //; s/^Unknown\..*/Unknown/' | sort -u
