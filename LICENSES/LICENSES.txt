@@ -1,0 +1,12 @@
+Licences:
+Apache-2.0
+BSD-2-Clause
+BSD-3-Clause
+MIT
+
+Packages:
+github.com/google/uuid; BSD-3-Clause
+github.com/ovh/endure-licence; Apache-2.0
+github.com/pkg/errors; BSD-2-Clause
+github.com/sirupsen/logrus; MIT
+golang.org/x/sys/unix; BSD-3-Clause
