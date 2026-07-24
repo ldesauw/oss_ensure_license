@@ -1,0 +1,149 @@
+name: e2e
+
+# End-to-end tests for the action itself, run against testdata/example-module.
+# Each job asserts one behaviour; jobs that expect the action to fail use
+# continue-on-error and check the step outcome.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-passes:
+    name: check passes on an up-to-date module
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: act
+        uses: ./
+        with:
+          mode: check
+          working-directory: testdata/example-module
+      - name: assert outputs
+        env:
+          CHANGED: ${{ steps.act.outputs.changed }}
+          LICENSES: ${{ steps.act.outputs.licenses }}
+          SUMMARY: ${{ steps.act.outputs.summary }}
+        run: |
+          set -euo pipefail
+          echo "changed=$CHANGED  summary=$SUMMARY  licenses=$LICENSES"
+          [ "$CHANGED" = "false" ] || { echo "::error::expected changed=false"; exit 1; }
+          [ "$SUMMARY" = "LICENSES/LICENSES.txt" ] || { echo "::error::unexpected summary"; exit 1; }
+          case "$LICENSES" in *Apache-2.0*) : ;; *) echo "::error::missing Apache-2.0"; exit 1 ;; esac
+          case "$LICENSES" in *MPL-2.0*) : ;; *) echo "::error::missing MPL-2.0"; exit 1 ;; esac
+
+  check-detects-drift:
+    name: check fails when a dependency is added
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: testdata/example-module/go.mod
+      - name: introduce drift (new dependency)
+        working-directory: testdata/example-module
+        run: |
+          set -euo pipefail
+          go get github.com/google/go-cmp@v0.6.0
+          printf 'package main\n\nimport _ "github.com/google/go-cmp/cmp"\n' > drift_dep.go
+          go mod tidy
+      - id: act
+        continue-on-error: true
+        uses: ./
+        with:
+          mode: check
+          working-directory: testdata/example-module
+      - name: assert failure
+        run: |
+          if [ "${{ steps.act.outcome }}" != "failure" ]; then
+            echo "::error::expected check to fail on drift, got '${{ steps.act.outcome }}'"
+            exit 1
+          fi
+          echo "drift correctly detected"
+
+  fail-on-licenses:
+    name: fail-on-licenses gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: forbid_present
+        continue-on-error: true
+        uses: ./
+        with:
+          mode: check
+          working-directory: testdata/example-module
+          fail-on-licenses: "MPL-2.0"
+      - id: forbid_absent
+        continue-on-error: true
+        uses: ./
+        with:
+          mode: check
+          working-directory: testdata/example-module
+          fail-on-licenses: "GPL-3.0,AGPL-3.0"
+      - name: assert
+        run: |
+          set -euo pipefail
+          [ "${{ steps.forbid_present.outcome }}" = "failure" ] \
+            || { echo "::error::expected failure for present MPL-2.0"; exit 1; }
+          [ "${{ steps.forbid_absent.outcome }}" = "success" ] \
+            || { echo "::error::expected success for absent GPL-3.0"; exit 1; }
+          echo "policy gate ok"
+
+  write-regenerates:
+    name: write regenerates and reports the change
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: testdata/example-module/go.mod
+      - name: introduce drift (new dependency)
+        working-directory: testdata/example-module
+        run: |
+          set -euo pipefail
+          go get github.com/google/go-cmp@v0.6.0
+          printf 'package main\n\nimport _ "github.com/google/go-cmp/cmp"\n' > drift_dep.go
+          go mod tidy
+      - id: act
+        uses: ./
+        with:
+          mode: write
+          working-directory: testdata/example-module
+      - name: assert regenerated
+        env:
+          CHANGED: ${{ steps.act.outputs.changed }}
+        run: |
+          set -euo pipefail
+          [ "$CHANGED" = "true" ] || { echo "::error::expected changed=true"; exit 1; }
+          f=testdata/example-module/LICENSES/go/github.com/google/go-cmp/LICENSE
+          test -f "$f" || { echo "::error::missing $f"; exit 1; }
+          grep -q "^BSD-3-Clause$" testdata/example-module/LICENSES/LICENSES.txt
+          echo "write regenerated the folder and reported changed=true"
+
+  pr-noop:
+    name: pr mode is a no-op when nothing changed
+    runs-on: ubuntu-latest
+    # Read-only on purpose: if the "changed" guard ever regresses, the PR step
+    # would try to write and fail here, catching the regression.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - id: act
+        uses: ./
+        with:
+          mode: pr
+          working-directory: testdata/example-module
+      - name: assert no pull request
+        env:
+          URL: ${{ steps.act.outputs.pull-request-url }}
+          CHANGED: ${{ steps.act.outputs.changed }}
+        run: |
+          set -euo pipefail
+          [ "$CHANGED" = "false" ] || { echo "::error::expected changed=false"; exit 1; }
+          [ -z "$URL" ] || { echo "::error::expected no PR url, got '$URL'"; exit 1; }
+          echo "pr mode was a no-op as expected"
